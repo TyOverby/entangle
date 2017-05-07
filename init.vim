@@ -1,44 +1,34 @@
-let g:mapping = {}
+if !has_key(g:, "mapping")
+    let g:mapping = {}
+endif
 
 " Creates a child terminal that starts out invisible
 function! g:CreateChild()
     " Get the current buffer id
     let current = bufnr('%')
-    " Get the curent mode
-    let current_mode = mode()
+    " store the current window view
+    let view = winsaveview()
     " launch a terminal
     execute "terminal"
     " get that childs buffer number
     let child = bufnr('%')
     " switch back to the current buffer
-    execute "b" . current
+    call g:HandySwitch(current, view)
     " store the mapping from current -> child in
     " the lookup table
     let g:mapping[current] = child
 endfunction
 
 " Switch buffers without messing anything up if possible
-function! g:HandySwitch(bufid)
-    " Dunno
-    let t = 1
-    " Dunno
-    let x = 1
-    while t <= tabpagenr('$')
-        let x = 1
-        for b in tabpagebuflist(t)
-            " if the buffer id is the one that we're looking for
-            if mb == a:bufid
-                " execute "w" on it and return
-                execute x . "wincmd w"
-                return
-            endif
-            " lol
-            let x += 1
-        endfor
-        " what is this even
-        let t += 1
-    endwhile
-    execute "b" . bufid
+function! g:HandySwitch(bufid, restore)
+    " save the window view
+    let sv = winsaveview()
+    " switch to the buffer
+    execute "b" . a:bufid
+    " if restore isn't the empty-dict, restore it
+    call winrestview(a:restore)
+    " return the stored window from before the switch
+    return sv
 endfunction
 
 " does the thing
@@ -68,11 +58,12 @@ function! g:DoTheThing()
             " Lookup the target buffer
             let target = g:mapping[current]
             " Switch to target buffer
-            call g:HandySwitch(target)
+            let reset = g:HandySwitch(target, {})
             " paste from @a
             normal! "ap
-            " Switch back to current buffer
-            call g:HandySwitch(current)
+            " Switch back to current buffer and reset the
+            " window positioning from before
+            call g:HandySwitch(current, reset)
         finally
             " let @a = a_save
         endtry
